@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/tidwall/resp"
 )
@@ -26,6 +27,9 @@ func main() {
 
 	fmt.Println("Server is listening on port 6379")
 
+	var mu sync.RWMutex
+	kvs := make(map[string]string)
+
 	for {
 		// Block until we receive an incoming connection
 		conn, err := l.Accept()
@@ -35,11 +39,11 @@ func main() {
 		}
 
 		// Handle client connection
-		go handleClient(&conn)
+		go handleClient(&conn, &mu, &kvs)
 	}
 }
 
-func handleClient(conn *net.Conn) {
+func handleClient(conn *net.Conn, mu *sync.RWMutex, kvs *map[string]string) {
 	// Ensure we close the connection after we're done
 	defer (*conn).Close()
 
@@ -71,15 +75,35 @@ func handleClient(conn *net.Conn) {
 		// PING
 		if val == "[ping]" {
 			wr.WriteSimpleString("PONG")
-			(*conn).Write(wbuf.Bytes())
-			continue
 		}
 
 		// ECHO
 		if v.Type() == resp.Array && strings.Contains(val, "[echo") {
 			wr.WriteString(v.Array()[1].String())
-			(*conn).Write(wbuf.Bytes())
-			continue
 		}
+
+		// SET
+		if v.Type() == resp.Array && strings.Contains(val, "[set") {
+			key := v.Array()[1].String()
+
+			mu.Lock()
+			(*kvs)[key] = v.Array()[2].String()
+			mu.Unlock()
+
+			wr.WriteSimpleString("OK")
+		}
+
+		// GET
+		if v.Type() == resp.Array && strings.Contains(val, "[get") {
+			key := v.Array()[1].String()
+
+			mu.Lock()
+			val := (*kvs)[key]
+			mu.Unlock()
+
+			wr.WriteString(val)
+		}
+
+		(*conn).Write(wbuf.Bytes())
 	}
 }
