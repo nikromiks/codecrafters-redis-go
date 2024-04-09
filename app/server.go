@@ -31,28 +31,26 @@ func main() {
 		}
 
 		// Handle client connection
-		handleClient(conn)
+		go handleClient(&conn)
 	}
 }
 
-func handleClient(conn net.Conn) {
+func handleClient(conn *net.Conn) {
 	// Ensure we close the connection after we're done
-	defer conn.Close()
+	defer (*conn).Close()
 
 	// Read data
 	buf := make([]byte, 1024)
 	for {
-		n, err := conn.Read(buf)
+		n, err := (*conn).Read(buf)
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
 			return
 		}
 
 		log.Println("Received data", string(buf[:n]))
 
 		if bytes.Equal(buf[:n], []byte("*1\r\n$4\r\nping\r\n")) {
-			conn.Write([]byte("+PONG\r\n"))
+			(*conn).Write([]byte("+PONG\r\n"))
 		}
 	}
 }
