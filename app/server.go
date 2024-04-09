@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
 	// Listen for incoming connections
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Failed to bind to port 6379")
+		os.Exit(1)
 		return
 	}
 
@@ -39,14 +41,18 @@ func handleClient(conn net.Conn) {
 
 	// Read data
 	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return
-	}
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+			return
+		}
 
-	log.Println("Received data", string(buf[:n]))
+		log.Println("Received data", string(buf[:n]))
 
-	if bytes.Equal(buf[:n], []byte("*1\r\n$4\r\nping\r\n")) {
-		conn.Write([]byte("+PONG\r\n"))
+		if bytes.Equal(buf[:n], []byte("*1\r\n$4\r\nping\r\n")) {
+			conn.Write([]byte("+PONG\r\n"))
+		}
 	}
 }
