@@ -3,9 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"strings"
+
+	"github.com/tidwall/resp"
 )
 
 func main() {
@@ -39,9 +43,9 @@ func handleClient(conn *net.Conn) {
 	// Ensure we close the connection after we're done
 	defer (*conn).Close()
 
-	// Read data
-	buf := make([]byte, 1024)
 	for {
+		// Read data
+		buf := make([]byte, 1024)
 		n, err := (*conn).Read(buf)
 		if err != nil {
 			return
@@ -49,8 +53,33 @@ func handleClient(conn *net.Conn) {
 
 		log.Println("Received data", string(buf[:n]))
 
-		if bytes.Equal(buf[:n], []byte("*1\r\n$4\r\nping\r\n")) {
-			(*conn).Write([]byte("+PONG\r\n"))
+		rd := resp.NewReader(bytes.NewBuffer(buf))
+		v, _, err := rd.ReadValue()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Read %s\n", v.String())
+
+		var wbuf bytes.Buffer
+		wr := resp.NewWriter(&wbuf)
+
+		val := v.String()
+
+		// PING
+		if val == "[ping]" {
+			wr.WriteSimpleString("PONG")
+			(*conn).Write(wbuf.Bytes())
+			continue
+		}
+
+		// ECHO
+		if v.Type() == resp.Array && strings.Contains(val, "[echo") {
+			wr.WriteString(v.Array()[1].String())
+			(*conn).Write(wbuf.Bytes())
+			continue
 		}
 	}
 }
