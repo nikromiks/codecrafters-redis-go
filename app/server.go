@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 
 	"github.com/codecrafters-io/redis-starter-go/app/controller"
 	"github.com/codecrafters-io/redis-starter-go/app/db"
@@ -13,13 +15,18 @@ import (
 )
 
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	port := "6379"
+	if len(os.Args) > 2 && os.Args[1] == "--port" {
+		port = os.Args[2]
+	}
+
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
 	if err != nil {
-		log.Fatal("Failed to bind to port 6379")
+		log.Fatal("Failed to bind to port ", port)
 	}
 	defer l.Close()
 
-	log.Println("Server is listening on port 6379")
+	log.Println("Server is listening on port ", port)
 
 	db := db.New()
 
