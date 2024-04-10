@@ -31,6 +31,8 @@ func Handle(v *resp.Value, wr *resp.Writer, d *db.DB) {
 		set(v, wr, d)
 	case command == "get":
 		get(v, wr, d)
+	case command == "info":
+		info(v, wr, d)
 	}
 }
 
@@ -81,4 +83,11 @@ func set(v *resp.Value, wr *resp.Writer, d *db.DB) {
 	d.Set(key, newVal)
 
 	wr.WriteSimpleString("OK")
+}
+
+func info(v *resp.Value, wr *resp.Writer, d *db.DB) {
+	wr.WriteString("role:master")
+	wr.WriteString("connected_slaves:0")
+	wr.WriteString("master_replid:123")
+	wr.WriteString("master_repl_offset:0")
 }
