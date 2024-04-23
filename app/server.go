@@ -3,66 +3,57 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net"
-	"os"
 
+	"github.com/codecrafters-io/redis-starter-go/app/config"
 	"github.com/codecrafters-io/redis-starter-go/app/controller"
 	"github.com/codecrafters-io/redis-starter-go/app/db"
-
 	"github.com/tidwall/resp"
 )
 
 func main() {
-	port := "6379"
-	if len(os.Args) > 2 && os.Args[1] == "--port" {
-		port = os.Args[2]
-	}
-
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
-	if err != nil {
-		log.Fatal("Failed to bind to port ", port)
-	}
-	defer l.Close()
-
-	log.Println("Server is listening on port ", port)
-
+	config := config.New()
 	db := db.New()
 
+	listener := startListener(config.Port)
+
 	for {
-		// Block until we receive an incoming connection
-		conn, err := l.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			log.Println("Error:", err)
+			log.Println("Error accepting connection:", err)
 			continue
 		}
 
-		go handleClient(&conn, db)
+		go handleConnection(conn, db, config)
 	}
 }
 
-func handleClient(conn *net.Conn, db *db.DB) {
-	// Ensure we close the connection after we're done
-	defer (*conn).Close()
+func startListener(port int) net.Listener {
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil {
+		log.Fatal("Failed to bind to port ", port)
+	}
+	return listener
+}
+
+func handleConnection(conn net.Conn, db *db.DB, config *config.Config) {
+	defer conn.Close()
 
 	for {
-		rd := resp.NewReader((*conn))
-		v, _, err := rd.ReadValue()
-		if err == io.EOF || err != nil {
-			log.Println(err)
+		reader := resp.NewReader(conn)
+		value, _, err := reader.ReadValue()
+		if err != nil {
 			break
 		}
 
-		log.Printf("Read %s\n", v.String())
-
 		var buf bytes.Buffer
-		wr := resp.NewWriter(&buf)
+		writer := resp.NewWriter(&buf)
 
-		controller.Handle(&v, wr, db)
+		controller.Handle(&value, writer, db, config)
 
 		if buf.Len() != 0 {
-			(*conn).Write(buf.Bytes())
+			conn.Write(buf.Bytes())
 		}
 	}
 }

@@ -1,16 +1,18 @@
 package controller
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/config"
 	"github.com/codecrafters-io/redis-starter-go/app/db"
 	"github.com/tidwall/resp"
 )
 
-func Handle(v *resp.Value, wr *resp.Writer, d *db.DB) {
+func Handle(v *resp.Value, wr *resp.Writer, d *db.DB, config *config.Config) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered after error: ", r)
@@ -32,7 +34,7 @@ func Handle(v *resp.Value, wr *resp.Writer, d *db.DB) {
 	case command == "get":
 		get(v, wr, d)
 	case command == "info":
-		info(v, wr, d)
+		info(v, wr, d, config)
 	}
 }
 
@@ -85,9 +87,9 @@ func set(v *resp.Value, wr *resp.Writer, d *db.DB) {
 	wr.WriteSimpleString("OK")
 }
 
-func info(v *resp.Value, wr *resp.Writer, d *db.DB) {
-	wr.WriteString("role:master")
-	wr.WriteString("connected_slaves:0")
-	wr.WriteString("master_replid:123")
-	wr.WriteString("master_repl_offset:0")
+func info(_ *resp.Value, wr *resp.Writer, _ *db.DB, c *config.Config) {
+	wr.WriteString(fmt.Sprintf("role:%s", c.Role))
+	wr.WriteString(fmt.Sprintf("connected_slaves:%d", c.ConnectedSlaves))
+	wr.WriteString(fmt.Sprintf("master_replid:%s", c.MasterReplID))
+	wr.WriteString(fmt.Sprintf("master_replid:%d", c.MasterReplOffset))
 }

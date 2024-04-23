@@ -10,4 +10,4 @@ module github.com/codecrafters-io/redis-starter-go
 
 go 1.19
 
-require github.com/tidwall/resp v0.1.1 // indirect
+require github.com/tidwall/resp v0.1.1
