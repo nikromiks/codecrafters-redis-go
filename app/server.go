@@ -16,7 +16,11 @@ func main() {
 	config := config.New()
 	db := db.New()
 
-	listener := startListener(config.Port)
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+	if err != nil {
+		log.Fatal("Failed to bind to port ", config.Port)
+	}
+	defer listener.Close()
 
 	for {
 		conn, err := listener.Accept()
@@ -25,28 +29,21 @@ func main() {
 			continue
 		}
 
+		log.Println("New connection: ", conn.RemoteAddr())
+
 		go handleConnection(conn, db, config)
 	}
-}
-
-func startListener(port int) net.Listener {
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
-	if err != nil {
-		log.Fatal("Failed to bind to port ", port)
-	}
-	return listener
 }
 
 func handleConnection(conn net.Conn, db *db.DB, config *config.Config) {
 	defer conn.Close()
 
+	reader := resp.NewReader(conn)
 	for {
-		reader := resp.NewReader(conn)
 		value, _, err := reader.ReadValue()
 		if err != nil {
 			break
 		}
-
 		var buf bytes.Buffer
 		writer := resp.NewWriter(&buf)
 

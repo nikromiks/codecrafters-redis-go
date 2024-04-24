@@ -35,6 +35,8 @@ func Handle(v *resp.Value, wr *resp.Writer, d *db.DB, config *config.Config) {
 		get(v, wr, d)
 	case command == "info":
 		info(v, wr, d, config)
+	case command == "config":
+		configCmd(v, wr, d, config)
 	}
 }
 
@@ -91,5 +93,19 @@ func info(_ *resp.Value, wr *resp.Writer, _ *db.DB, c *config.Config) {
 	wr.WriteString(fmt.Sprintf("role:%s", c.Role))
 	wr.WriteString(fmt.Sprintf("connected_slaves:%d", c.ConnectedSlaves))
 	wr.WriteString(fmt.Sprintf("master_replid:%s", c.MasterReplID))
-	wr.WriteString(fmt.Sprintf("master_replid:%d", c.MasterReplOffset))
+	wr.WriteString(fmt.Sprintf("master_repl_offset:%d", c.MasterReplOffset))
+}
+
+func configCmd(v *resp.Value, wr *resp.Writer, _ *db.DB, c *config.Config) {
+	cmd := v.Array()[1].String()
+
+	if cmd == "get" {
+		key := v.Array()[2].String()
+
+		if key == "dir" {
+			wr.WriteMultiBulk("dir", c.Dir)
+		} else if key == "dbfilename" {
+			wr.WriteMultiBulk("dbfilename", c.DBFilename)
+		}
+	}
 }

@@ -13,6 +13,9 @@ type Config struct {
 	ConnectedSlaves  int    `json:"connected_slaves"`
 	MasterReplID     string `json:"master_replid"`
 	MasterReplOffset int    `json:"master_repl_offset"`
+
+	Dir        string
+	DBFilename string
 }
 
 func New() *Config {
@@ -23,9 +26,15 @@ func New() *Config {
 	port := 6379
 	var replicaofHost string
 	var replicaofPort int
+	var dir string
+	var dbfilename string
 
 	for i := 1; i < len(args); i++ {
-		if args[i] == "--port" && i+1 < len(args) {
+		if args[i] == "--dbfilename" && i+1 < len(args) {
+			dbfilename = args[i+1]
+		} else if args[i] == "--dir" && i+1 < len(args) {
+			dir = args[i+1]
+		} else if args[i] == "--port" && i+1 < len(args) {
 			fmt.Sscanf(args[i+1], "%d", &port)
 		} else if args[i] == "--replicaof" && i+2 < len(args) {
 			replicaofHost = args[i+1]
@@ -40,8 +49,10 @@ func New() *Config {
 		ReplicaOfHost:    replicaofHost,
 		ReplicaOfPort:    replicaofPort,
 		ConnectedSlaves:  0,
-		MasterReplID:     "123",
+		MasterReplID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
 		MasterReplOffset: 0,
+		Dir:              dir,
+		DBFilename:       dbfilename,
 	}
 
 	fmt.Println("Config created with: ", config)
